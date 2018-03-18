@@ -43,7 +43,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 var CheckLimit = function (req, res, next) {
   var ip = String(requestIp.getClientIp(req)).replace(/:/g,'?').replace(/\./g,'!');
   var d = new Date();
-  var timestamp = "D" + String(d.getFullYear())+String(d.getMonth())+String(d.getDate())+String(d.getHours());
+  var timestamp = String(d.getFullYear())+"-"+String(d.getMonth())+"-"+String(d.getDate())+"-"+String(d.getHours());
   console.log('check:'+ip+' timestamp:'+timestamp+' realip:'+requestIp.getClientIp(req));
   firebase.database().ref('/users/' + ip + '/'+timestamp).once('value').then(function(snapshot) {
       var data = snapshot.val();
@@ -54,6 +54,10 @@ var CheckLimit = function (req, res, next) {
           firebase.database().ref('users/' + ip + '/'+timestamp).set({
             time: parseInt(data.time)+1
           }).then(function(){
+            var date = new Date(String(snapshot.key)+":00");
+            var a = new Date(date.getTime()+(1000*60*60));
+            res.setHeader('X-RateLimit-Remaining',parseInt(data.time)+1);
+            res.setHeader('X-RateLimit-Reset',a);
             next();
           });
         }
@@ -61,6 +65,10 @@ var CheckLimit = function (req, res, next) {
         firebase.database().ref('users/' + ip + '/'+timestamp).set({
           time: 1
         }).then(function(){
+            var date = new Date(String(timestamp)+":00");
+            var a = new Date(date.getTime()+(1000*60*60));
+            res.setHeader('X-RateLimit-Remaining',1);
+            res.setHeader('X-RateLimit-Reset',a);
             next();
         });
       }
